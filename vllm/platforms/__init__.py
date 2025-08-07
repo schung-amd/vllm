@@ -105,17 +105,14 @@ def rocm_platform_plugin() -> Optional[str]:
     is_rocm = False
     logger.debug("Checking if ROCm platform is available.")
     try:
+        # Avoid init of amdsmi as it does not work on WSL
+        # Detect presence of GPU via torch instead
         import amdsmi
-        amdsmi.amdsmi_init()
-        try:
-            if len(amdsmi.amdsmi_get_processor_handles()) > 0:
-                is_rocm = True
-                logger.debug("Confirmed ROCm platform is available.")
-            else:
-                logger.debug("ROCm platform is not available because"
-                             " no GPU is found.")
-        finally:
-            amdsmi.amdsmi_shut_down()
+        import torch
+        if (amdsmi.amdsmi_get_rocm_version()[0] and torch.cuda.is_available()
+                and torch.version.hip):
+            is_rocm = True
+            logger.debug("Confirmed ROCm platform is available.")
     except Exception as e:
         logger.debug("ROCm platform is not available because: %s", str(e))
 
